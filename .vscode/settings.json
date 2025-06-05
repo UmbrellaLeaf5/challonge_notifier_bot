@@ -1,0 +1,6 @@
+{
+  "ruff.configuration": "./ruff.toml",
+  "cSpell.words": [
+    "challonge"
+  ]
+}
