@@ -2,15 +2,10 @@ import telebot
 import requests
 import time
 
-# Conf
-TOKEN = "<TELEGRAM_BOT_TOKEN>"
-CHALLONGE_API_KEY = "<CHALLONGE_API_KEY>"
-TOURNAMENT_URL = "<TOURNAMENT_ID>"  # ID of the tournament, for example 'mytournament' in 'https://challonge.com/mytournament'
-CHAT_ID = "<CHAT_ID>"  # Chat to send messages to
-COOKIES = {"<place cookies here for connection>"}
+from config.config import config
 
 
-bot = telebot.TeleBot(TOKEN)
+bot = telebot.TeleBot(config["token"])
 
 # Already notified matches
 notified_matches = set()
@@ -21,57 +16,79 @@ def start(message):
   bot.reply_to(message, "Bot is running!")
 
 
-def fetch_matches():
-  """get all matches from the tournament"""
-  url = f"https://api.challonge.com/v1/tournaments/{TOURNAMENT_URL}/matches.json"
-  params = {"api_key": CHALLONGE_API_KEY}
-  headers = COOKIES
+def FetchMatches():
+  """
+  Get all matches from the tournament.
+  """
+
+  url = (
+    f"https://api.challonge.com/v1/tournaments/{config['tournament_url']}/matches.json"
+  )
+
+  params = {"api_key": config["challonge_api_key"]}
+  headers = config["cookies"]
   response = requests.get(url, params=params, headers=headers)
   response.raise_for_status()
   return response.json()
 
 
-def notify_matches():
-  """check the match status and send notifications"""
-  matches = fetch_matches()
+def NotifyMatches():
+  """
+  Check the match status and send notifications.
+  """
+
+  matches = FetchMatches()
+
   for match in matches:
     match_id = match["match"]["id"]
-    player1_id = match["match"]["player1_id"]
-    player2_id = match["match"]["player2_id"]
+
+    player_1_id = match["match"]["player1_id"]
+    player_2_id = match["match"]["player2_id"]
+
     state = match["match"]["state"]
     is_underway = match["match"]["underway_at"]
 
     if state == "complete" and match_id in notified_matches:
-      player1 = fetch_participant_name(player1_id)
-      player2 = fetch_participant_name(player2_id)
-      winner = fetch_participant_name(match["match"]["winner_id"])
+      player_1 = FetchParticipantName(player_1_id)
+      player_2 = FetchParticipantName(player_2_id)
+
+      winner = FetchParticipantName(match["match"]["winner_id"])
+
       message = (
-        f"🎉 <b>{winner}</b> — триумфатор матча\n{player1} <i>vs</i> {player2}! 🍻"
+        f"🎉 <b>{winner}</b> — триумфатор матча\n{player_1} <i>vs</i> {player_2}! 🍻"
       )
-      bot.send_message(CHAT_ID, message, parse_mode="HTML")
+
+      bot.send_message(config["chat_id"], message, parse_mode="HTML")
       notified_matches.remove(match_id)
 
     if state == "open" and is_underway and match_id not in notified_matches:
-      player1 = fetch_participant_name(player1_id)
-      player2 = fetch_participant_name(player2_id)
-      message = f"⚡️ Начинается матч:\n<b>{player1}</b> – <b>{player2}</b> 🍺"
-      bot.send_message(CHAT_ID, message, parse_mode="HTML")
+      player_1 = FetchParticipantName(player_1_id)
+      player_2 = FetchParticipantName(player_2_id)
+
+      message = f"⚡️ Начинается матч:\n<b>{player_1}</b> – <b>{player_2}</b> 🍺"
+
+      bot.send_message(config["chat_id"], message, parse_mode="HTML")
       notified_matches.add(match_id)
 
 
-def fetch_participant_name(participant_id="233472101"):
-  """get the team name"""
-  url = f"https://api.challonge.com/v1/tournaments/{TOURNAMENT_URL}/participants/{participant_id}.json"
-  params = {"api_key": CHALLONGE_API_KEY}
-  headers = COOKIES
+def FetchParticipantName(participant_id: int):
+  """
+  Get the team name.
+  """
+
+  url = f"https://api.challonge.com/v1/tournaments/{config['tournament_url']}/participants/{participant_id}.json"
+
+  params = {"api_key": config["challonge_api_key"]}
+  headers = config["cookies"]
   response = requests.get(url, params=params, headers=headers)
   participant = response.json()
+
   return participant["participant"]["name"]
 
 
 def main():
   while True:
-    notify_matches()
+    NotifyMatches()
     time.sleep(15)  # Fetch every 15 seconds
 
 
@@ -80,4 +97,5 @@ if __name__ == "__main__":
 
   bot_thread = Thread(target=bot.polling, args=())
   bot_thread.start()
+
   main()

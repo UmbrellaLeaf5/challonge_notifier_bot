@@ -1,6 +1,8 @@
 {
   "ruff.configuration": "./ruff.toml",
   "cSpell.words": [
-    "challonge"
+    "challonge",
+    "mytournament",
+    "telebot"
   ]
 }
