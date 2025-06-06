@@ -5,15 +5,20 @@ import time
 from config.config import config
 
 
-bot = telebot.TeleBot(config["token"])
+bot = telebot.TeleBot(config["tg_bot_token"])
 
 # Already notified matches
 notified_matches = set()
 
 
 @bot.message_handler(commands=["start"])
-def start(message):
-  bot.reply_to(message, "Bot is running!")
+def Start(message):
+  bot.reply_to(
+    message,
+    "🥃 Добро пожаловать на турнир по бирпонгу 2025!"
+    "\n Для просмотра объявлений о проведении матчей перейдите в чат: "
+    f"https://t.me/{bot.get_chat(config['tg_chat_id']).username} 🍻",
+  )
 
 
 def FetchMatches():
@@ -25,9 +30,13 @@ def FetchMatches():
     f"https://api.challonge.com/v1/tournaments/{config['tournament_url']}/matches.json"
   )
 
-  params = {"api_key": config["challonge_api_key"]}
-  headers = config["cookies"]
-  response = requests.get(url, params=params, headers=headers)
+  response = requests.get(
+    url,
+    auth=(config["challonge_username"], config["challonge_api_key"]),
+    cookies=config["cookies"],
+    headers=config["headers"],
+  )
+
   response.raise_for_status()
   return response.json()
 
@@ -58,7 +67,7 @@ def NotifyMatches():
         f"🎉 <b>{winner}</b> — триумфатор матча\n{player_1} <i>vs</i> {player_2}! 🍻"
       )
 
-      bot.send_message(config["chat_id"], message, parse_mode="HTML")
+      bot.send_message(config["tg_chat_id"], message, parse_mode="HTML")
       notified_matches.remove(match_id)
 
     if state == "open" and is_underway and match_id not in notified_matches:
@@ -67,20 +76,23 @@ def NotifyMatches():
 
       message = f"⚡️ Начинается матч:\n<b>{player_1}</b> – <b>{player_2}</b> 🍺"
 
-      bot.send_message(config["chat_id"], message, parse_mode="HTML")
+      bot.send_message(config["tg_chat_id"], message, parse_mode="HTML")
       notified_matches.add(match_id)
 
 
-def FetchParticipantName(participant_id: int):
+def FetchParticipantName(participant_id):
   """
   Get the team name.
   """
 
   url = f"https://api.challonge.com/v1/tournaments/{config['tournament_url']}/participants/{participant_id}.json"
 
-  params = {"api_key": config["challonge_api_key"]}
-  headers = config["cookies"]
-  response = requests.get(url, params=params, headers=headers)
+  response = requests.get(
+    url,
+    auth=(config["challonge_username"], config["challonge_api_key"]),
+    cookies=config["cookies"],
+    headers=config["headers"],
+  )
   participant = response.json()
 
   return participant["participant"]["name"]

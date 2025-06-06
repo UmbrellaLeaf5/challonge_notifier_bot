@@ -1,0 +1,9 @@
+{
+  "tg_bot_token": "token to access the HTTP API",
+  "challonge_api_key": "from challonge user settings",
+  "challonge_username": "User",
+  "tournament_url": "ul_test",
+  "tg_chat_id": "chat to send notifies",
+  "cookies": {},
+  "headers": {}
+}

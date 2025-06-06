@@ -1,9 +1,0 @@
-{
-  "token": "<TELEGRAM_BOT_TOKEN>",
-  "challonge_api_key": "<CHALLONGE_API_KEY>",
-  "tournament_url": "<TOURNAMENT_ID>",
-  "chat_id": "<CHAT_ID>",
-  "cookies": {
-    "cookie": "<place cookies here for connection>"
-  }
-}
