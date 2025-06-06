@@ -3,10 +3,10 @@ from typing import Any
 
 Config = dict[str, Any]
 
-# имя файла конфигурации.
+# MEANS: имя файла конфигурации.
 config_file_name: str = "config_real.json"
 
-# путь к файлу конфигурации.
+# MEANS: путь к файлу конфигурации.
 main_config_file_name: str = f"config/{config_file_name}"
 
 

@@ -13,17 +13,31 @@ notified_matches = set()
 
 @bot.message_handler(commands=["start"])
 def Start(message):
+  """
+  Обрабатывает команду /start, отправляя приветственное сообщение.
+
+  Args:
+      message: объект сообщения от пользователя.
+  """
+
   bot.reply_to(
     message,
-    "🥃 Добро пожаловать на турнир по бирпонгу 2025!"
+    "🥃 <b>Добро пожаловать на турнир по бирпонгу 2025!</b>"
     "\n Для просмотра объявлений о проведении матчей перейдите в чат: "
     f"https://t.me/{bot.get_chat(config['tg_chat_id']).username} 🍻",
+    parse_mode="HTML",
   )
 
 
 def FetchMatches():
   """
-  Get all matches from the tournament.
+  Получает все матчи с турнира через Challonge API.
+
+  Returns:
+      list: список матчей в формате JSON.
+
+  Raises:
+      HTTPError: если запрос к API завершился ошибкой.
   """
 
   url = (
@@ -43,7 +57,9 @@ def FetchMatches():
 
 def NotifyMatches():
   """
-  Check the match status and send notifications.
+  Проверяет статус матчей и отправляет уведомления в чат:
+  - При начале матча.
+  - При завершении матча.
   """
 
   matches = FetchMatches()
@@ -80,9 +96,15 @@ def NotifyMatches():
       notified_matches.add(match_id)
 
 
-def FetchParticipantName(participant_id):
+def FetchParticipantName(participant_id: int):
   """
-  Get the team name.
+  Получает название команды/участника по его ID.
+
+  Args:
+      participant_id (int): ID участника турнира.
+
+  Returns:
+      str: название команды/участника.
   """
 
   url = f"https://api.challonge.com/v1/tournaments/{config['tournament_url']}/participants/{participant_id}.json"
@@ -99,6 +121,10 @@ def FetchParticipantName(participant_id):
 
 
 def main():
+  """
+  Основной цикл программы: проверяет матчи каждые 15 секунд.
+  """
+
   while True:
     NotifyMatches()
     time.sleep(15)  # Fetch every 15 seconds
@@ -107,6 +133,7 @@ def main():
 if __name__ == "__main__":
   from threading import Thread
 
+  # MEANS: поток для работы бота.
   bot_thread = Thread(target=bot.polling, args=())
   bot_thread.start()
 
