@@ -1,7 +1,7 @@
 [project]
-name = "challonge-notifier-bot"
-version = "0.1.0"
-description = ""
+name = "challonge_notifier_bot"
+version = "0.2.0"
+description = "Simple challonge TG bot for notifications about matches"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
