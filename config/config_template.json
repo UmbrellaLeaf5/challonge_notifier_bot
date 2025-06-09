@@ -1,9 +1,10 @@
 {
   "tg_bot_token": "token to access the HTTP API",
-  "challonge_api_key": "from challonge user settings",
+  "challonge_api_key": "from challonge (website) user settings",
   "challonge_username": "User",
-  "tournament_url": "ul_test",
+  "tournament_url": "challonge tournament",
   "tg_chat_id": "chat to send notifies",
+  "start_message": "🥃 <b>Добро пожаловать на турнир по бирпонгу 2025!</b>\n Для просмотра объявлений о проведении матчей перейдите в чат: https://t.me/+0Yd3LlSRHFNhYTE6 🍻",
   "cookies": {},
   "headers": {}
 }

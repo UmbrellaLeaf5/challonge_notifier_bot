@@ -4,10 +4,10 @@ import time
 
 from config.config import config
 
-
+# MEANS: экземпляр класса бота
 bot = telebot.TeleBot(config["tg_bot_token"])
 
-# Already notified matches
+# MEANS: уже объявленные матчи
 notified_matches = set()
 
 
@@ -22,9 +22,7 @@ def Start(message):
 
   bot.reply_to(
     message,
-    "🥃 <b>Добро пожаловать на турнир по бирпонгу 2025!</b>"
-    "\n Для просмотра объявлений о проведении матчей перейдите в чат: "
-    f"https://t.me/{bot.get_chat(config['tg_chat_id']).username} 🍻",
+    config["start_message"],
     parse_mode="HTML",
   )
 

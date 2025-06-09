@@ -4,7 +4,9 @@ from typing import Any
 Config = dict[str, Any]
 
 # MEANS: имя файла конфигурации.
-config_file_name: str = "config_real.json"
+config_file_name: str = (
+  "config_real.json"  # предполагается, что файл config_template.json изменять не стоит
+)
 
 # MEANS: путь к файлу конфигурации.
 main_config_file_name: str = f"config/{config_file_name}"
