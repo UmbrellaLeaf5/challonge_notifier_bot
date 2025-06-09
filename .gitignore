@@ -169,7 +169,6 @@ cython_debug/
 
 # VS code Folders
 .vscode/*
-!.vscode/settings.json
 
 # Solution data
 *solved.ipynb
