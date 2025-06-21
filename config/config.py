@@ -1,6 +1,7 @@
 import json
 from typing import Any
 
+
 Config = dict[str, Any]
 
 # MEANS: имя файла конфигурации.
@@ -25,7 +26,7 @@ def GetConfig(file_name: str = main_config_file_name, encoding: str = "utf-8") -
   """
 
   # открываем файл конфигурации.
-  with open(file_name, "r", encoding=encoding) as config:
+  with open(file_name, encoding=encoding) as config:
     # загружаем конфигурацию из JSON.
     return json.load(config)
 

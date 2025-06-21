@@ -1,8 +1,10 @@
-import telebot
-import requests
 import time
 
+import requests
+import telebot
+
 from config.config import config
+
 
 # MEANS: экземпляр класса бота
 bot = telebot.TeleBot(config["tg_bot_token"])
