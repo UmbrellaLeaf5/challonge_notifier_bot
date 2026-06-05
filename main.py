@@ -1,9 +1,12 @@
 import io
-import time
+import signal
+import traceback
+from datetime import datetime
+from threading import Event, Thread
 
 import requests
+import resvg_py
 import telebot
-from playwright.sync_api import sync_playwright
 
 from config.config import config
 
@@ -41,12 +44,17 @@ def Grid(message):
   """
 
   image = FetchTournamentImage()
-  bot.send_photo(message.chat.id, image, caption="🧊 Актуальная турнирная сетка")
+  bot.send_photo(
+    message.chat.id,
+    image,
+    caption="🧊 <b>Актуальная турнирная сетка!</b>",
+    parse_mode="HTML",
+  )
 
 
 def FetchTournamentImage():
   """
-  Скачивает SVG турнирной сетки и рендерит в PNG через Playwright.
+  Скачивает SVG турнирной сетки и рендерит в PNG через resvg.
 
   Returns:
       BytesIO: изображение турнирной сетки в формате PNG.
@@ -78,17 +86,8 @@ def FetchTournamentImage():
 
   svg_response.raise_for_status()
 
-  html = f'<html><body style="margin:0;background:#fff">{svg_response.text}</body></html>'
-
-  with sync_playwright() as p:
-    with p.chromium.launch() as browser:
-      page = browser.new_page()
-
-      page.set_content(html)
-
-      screenshot = page.locator("svg#top_level").screenshot(type="png")
-
-  return io.BytesIO(screenshot)
+  png_bytes = resvg_py.svg_to_bytes(svg_string=svg_response.text)
+  return io.BytesIO(png_bytes)
 
 
 def FetchMatches():
@@ -115,9 +114,10 @@ def FetchMatches():
 
   response.raise_for_status()
 
-  print(response.json())
+  matches = response.json()
+  print(f"[{datetime.now().strftime('%H:%M:%S')}]", matches)
 
-  return response.json()
+  return matches
 
 
 def NotifyMatches():
@@ -180,6 +180,9 @@ def FetchParticipantName(participant_id: int):
     cookies=config["cookies"],
     headers=config["headers"],
   )
+
+  response.raise_for_status()
+
   participant = response.json()
 
   return participant["participant"]["name"]
@@ -190,16 +193,32 @@ def main():
   Основной цикл программы: проверяет матчи каждые 15 секунд.
   """
 
-  while True:
-    NotifyMatches()
-    time.sleep(15)  # Fetch every 15 seconds
+  while not stop_event.is_set():
+    try:
+      NotifyMatches()
+
+    except Exception:
+      print(
+        f"[{datetime.now().strftime('%H:%M:%S')}] Ошибка в цикле опроса:\n"
+        f"{traceback.format_exc()}",
+      )
+
+    stop_event.wait(15)
 
 
 if __name__ == "__main__":
-  from threading import Thread
+  stop_event = Event()
+
+  def _shutdown(signum, frame):
+    print(f"[{datetime.now().strftime('%H:%M:%S')}] Завершение работы...")
+    stop_event.set()
+    bot.stop_polling()
+
+  signal.signal(signal.SIGINT, _shutdown)
+  signal.signal(signal.SIGTERM, _shutdown)
 
   # MEANS: поток для работы бота.
-  bot_thread = Thread(target=bot.polling, args=())
+  bot_thread = Thread(target=bot.polling, daemon=True)
   bot_thread.start()
 
   main()
