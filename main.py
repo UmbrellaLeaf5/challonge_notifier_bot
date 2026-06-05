@@ -118,12 +118,15 @@ def FetchTournamentInfo():
   return response.json()["tournament"]
 
 
-def FetchWinnerName():
+def FetchParticipantsByRank(rank: int):
   """
-  Находит победителя турнира (участник с final_rank = 1).
+  Находит участников турнира с заданным final_rank.
+
+  Args:
+      rank: номер места (1, 2, 3, ...).
 
   Returns:
-      str | None: имя победителя или None.
+      list[str]: список имён участников с данным рангом.
   """
 
   url = f"https://api.challonge.com/v1/tournaments/{config['tournament_url']}/participants.json"
@@ -137,11 +140,13 @@ def FetchWinnerName():
 
   response.raise_for_status()
 
-  for p in response.json():
-    if p["participant"]["final_rank"] == 1:
-      return p["participant"]["name"]
+  names = [
+    p["participant"]["name"]
+    for p in response.json()
+    if p["participant"]["final_rank"] == rank
+  ]
 
-  return None
+  return names
 
 
 def NotifyTournamentStatus():
@@ -169,12 +174,15 @@ def NotifyTournamentStatus():
     bot.send_message(config["tg_chat_id"], message, parse_mode="HTML")
 
   if state == "complete":
-    winner = FetchWinnerName()
-
     parts = [config["tournament_complete"].format(name=tournament["name"])]
 
-    if winner:
-      parts.append(config["tournament_winner"].format(winner=winner))
+    rank_keys = {1: "tournament_rank_1", 2: "tournament_rank_2", 3: "tournament_rank_3"}
+
+    for rank, key in rank_keys.items():
+      names = FetchParticipantsByRank(rank)
+
+      if names:
+        parts.append(config[key].format(names=", ".join(names)))
 
     bot.send_message(config["tg_chat_id"], "\n".join(parts), parse_mode="HTML")
 
