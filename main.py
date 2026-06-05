@@ -17,6 +17,9 @@ bot = telebot.TeleBot(config["tg_bot_token"])
 # MEANS: уже объявленные матчи
 notified_matches = set()
 
+# MEANS: предыдущее состояние турнира
+tournament_state: list[str | None] = [None]
+
 
 @bot.message_handler(commands=["start"])
 def Start(message):
@@ -47,7 +50,7 @@ def Grid(message):
   bot.send_photo(
     message.chat.id,
     image,
-    caption="🧊 <b>Актуальная турнирная сетка!</b>",
+    caption=config["grid_caption"],
     parse_mode="HTML",
   )
 
@@ -90,6 +93,94 @@ def FetchTournamentImage():
   return io.BytesIO(png_bytes)
 
 
+def FetchTournamentInfo():
+  """
+  Получает информацию о турнире через Challonge API.
+
+  Returns:
+      dict: данные турнира.
+
+  Raises:
+      HTTPError: если запрос к API завершился ошибкой.
+  """
+
+  url = f"https://api.challonge.com/v1/tournaments/{config['tournament_url']}.json"
+
+  response = requests.get(
+    url,
+    auth=(config["challonge_username"], config["challonge_api_key"]),
+    cookies=config["cookies"],
+    headers=config["headers"],
+  )
+
+  response.raise_for_status()
+
+  return response.json()["tournament"]
+
+
+def FetchWinnerName():
+  """
+  Находит победителя турнира (участник с final_rank = 1).
+
+  Returns:
+      str | None: имя победителя или None.
+  """
+
+  url = f"https://api.challonge.com/v1/tournaments/{config['tournament_url']}/participants.json"
+
+  response = requests.get(
+    url,
+    auth=(config["challonge_username"], config["challonge_api_key"]),
+    cookies=config["cookies"],
+    headers=config["headers"],
+  )
+
+  response.raise_for_status()
+
+  for p in response.json():
+    if p["participant"]["final_rank"] == 1:
+      return p["participant"]["name"]
+
+  return None
+
+
+def NotifyTournamentStatus():
+  """
+  Отслеживает состояние турнира и отправляет уведомления:
+  - При старте турнира.
+  - При завершении турнира с именем победителя.
+  """
+
+  tournament = FetchTournamentInfo()
+  state = tournament["state"]
+
+  if tournament_state[0] is None:
+    tournament_state[0] = state
+    return
+
+  if state == tournament_state[0]:
+    return
+
+  if state == "underway" and tournament_state[0] == "pending":
+    message = config["tournament_start"].format(
+      name=tournament["name"],
+      count=tournament["participants_count"],
+    )
+    bot.send_message(config["tg_chat_id"], message, parse_mode="HTML")
+
+  if state == "complete":
+    winner = FetchWinnerName()
+
+    parts = [config["tournament_complete"].format(name=tournament["name"])]
+
+    if winner:
+      parts.append(config["tournament_winner"].format(winner=winner))
+
+    bot.send_message(config["tg_chat_id"], "\n".join(parts), parse_mode="HTML")
+
+  tournament_state[0] = state
+
+
 def FetchMatches():
   """
   Получает все матчи с турнира через Challonge API.
@@ -115,7 +206,12 @@ def FetchMatches():
   response.raise_for_status()
 
   matches = response.json()
-  print(f"[{datetime.now().strftime('%H:%M:%S')}]", matches)
+
+  print(
+    f"[{datetime.now().strftime('%H:%M:%S')}]",
+    matches,
+    "\n\n-----------------------------------\n",
+  )
 
   return matches
 
@@ -144,8 +240,10 @@ def NotifyMatches():
 
       winner = FetchParticipantName(match["match"]["winner_id"])
 
-      message = (
-        f"🎉 <b>{winner}</b> — триумфатор матча\n{player_1} <i>vs</i> {player_2}! 🍻"
+      message = config["match_winner"].format(
+        winner=winner,
+        player_1=player_1,
+        player_2=player_2,
       )
 
       bot.send_message(config["tg_chat_id"], message, parse_mode="HTML")
@@ -155,7 +253,10 @@ def NotifyMatches():
       player_1 = FetchParticipantName(player_1_id)
       player_2 = FetchParticipantName(player_2_id)
 
-      message = f"⚡️ Начинается матч:\n<b>{player_1}</b> – <b>{player_2}</b> 🍺"
+      message = config["match_start"].format(
+        player_1=player_1,
+        player_2=player_2,
+      )
 
       bot.send_message(config["tg_chat_id"], message, parse_mode="HTML")
       notified_matches.add(match_id)
@@ -196,6 +297,7 @@ def main():
   while not stop_event.is_set():
     try:
       NotifyMatches()
+      NotifyTournamentStatus()
 
     except Exception:
       print(
