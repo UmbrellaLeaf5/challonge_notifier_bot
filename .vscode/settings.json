@@ -5,6 +5,8 @@
     "mytournament",
     "pytelegrambotapi",
     "telebot",
-    "бирпонгу"
-  ]
+    "бирпонгу",
+    "рендерит"
+  ],
+  "python-envs.defaultEnvManager": "ms-python.python:venv"
 }

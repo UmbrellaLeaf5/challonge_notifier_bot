@@ -1,7 +1,9 @@
+import io
 import time
 
 import requests
 import telebot
+from playwright.sync_api import sync_playwright
 
 from config.config import config
 
@@ -29,6 +31,66 @@ def Start(message):
   )
 
 
+@bot.message_handler(commands=["grid"])
+def Grid(message):
+  """
+  Обрабатывает команду /grid, отправляя в чат изображение турнирной сетки.
+
+  Args:
+      message: объект сообщения от пользователя.
+  """
+
+  image = FetchTournamentImage()
+  bot.send_photo(message.chat.id, image, caption="🧊 Актуальная турнирная сетка")
+
+
+def FetchTournamentImage():
+  """
+  Скачивает SVG турнирной сетки и рендерит в PNG через Playwright.
+
+  Returns:
+      BytesIO: изображение турнирной сетки в формате PNG.
+
+  Raises:
+      HTTPError: если запрос к API завершился ошибкой.
+  """
+
+  url = f"https://api.challonge.com/v1/tournaments/{config['tournament_url']}.json"
+
+  response = requests.get(
+    url,
+    auth=(config["challonge_username"], config["challonge_api_key"]),
+    cookies=config["cookies"],
+    headers=config["headers"],
+  )
+
+  response.raise_for_status()
+  tournament = response.json()
+
+  svg_url = tournament["tournament"]["live_image_url"]
+
+  svg_response = requests.get(
+    svg_url,
+    auth=(config["challonge_username"], config["challonge_api_key"]),
+    cookies=config["cookies"],
+    headers=config["headers"],
+  )
+
+  svg_response.raise_for_status()
+
+  html = f'<html><body style="margin:0;background:#fff">{svg_response.text}</body></html>'
+
+  with sync_playwright() as p:
+    with p.chromium.launch() as browser:
+      page = browser.new_page()
+
+      page.set_content(html)
+
+      screenshot = page.locator("svg#top_level").screenshot(type="png")
+
+  return io.BytesIO(screenshot)
+
+
 def FetchMatches():
   """
   Получает все матчи с турнира через Challonge API.
@@ -52,6 +114,9 @@ def FetchMatches():
   )
 
   response.raise_for_status()
+
+  print(response.json())
+
   return response.json()
 
 
